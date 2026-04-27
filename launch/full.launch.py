@@ -12,10 +12,10 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
+    autonomous_enabled = LaunchConfiguration('autonomous_enabled')
 
     pkg_share = get_package_share_directory('p5t4')
     urdf_path = os.path.join(pkg_share, 'urdf', 'car.urdf.xacro')
-    controllers_file = os.path.join(pkg_share, 'config', 'controllers.yaml')
     rviz_config_file = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     zed_config_dir = os.path.join(pkg_share, 'config')
     slam_params_path = os.path.join(pkg_share, 'config', 'slam_params.yaml')
@@ -29,42 +29,28 @@ def generate_launch_description():
         output='screen',
     )
 
-    control_node = Node(
-        package='controller_manager',
-        executable='ros2_control_node',
-        parameters=[
-            {'robot_description': robot_description, 'use_sim_time': use_sim_time},
-            controllers_file,
-        ],
-        output='screen',
-    )
-
-    joint_state_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
-        output='screen',
-    )
-
-    steering_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['steering_position_controller', '--controller-manager', '/controller_manager'],
-        output='screen',
-    )
-
-    traction_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['traction_velocity_controller', '--controller-manager', '/controller_manager'],
-        output='screen',
-    )
-
     cmd_converter = Node(
         package='p5t4',
         executable='cmd_vel_to_ackermann',
         output='screen',
         parameters=[{'use_sim_time': use_sim_time}],
+    )
+
+    joint_state_converter = Node(
+        package='p5t4',
+        executable='cmd_vel_to_joint_states',
+        output='screen',
+        parameters=[{'use_sim_time': use_sim_time}],
+    )
+
+    can_driver = Node(
+        package='p5t4',
+        executable='driver',
+        output='screen',
+        parameters=[
+            {'autonomous_enabled': autonomous_enabled},
+            {'use_sim_time': use_sim_time},
+        ],
     )
 
     rviz2 = Node(
@@ -128,12 +114,11 @@ def generate_launch_description():
     return LaunchDescription([
         # Keep false on hardware unless a /clock source exists.
         DeclareLaunchArgument('use_sim_time', default_value='false'),
+        DeclareLaunchArgument('autonomous_enabled', default_value='true'),
         robot_state_publisher,
-        control_node,
-        joint_state_spawner,
-        steering_spawner,
-        traction_spawner,
         cmd_converter,
+        joint_state_converter,
+        can_driver,
         rviz2,
         sllidar_ros2,
         lidar_frame_compat_tf,
