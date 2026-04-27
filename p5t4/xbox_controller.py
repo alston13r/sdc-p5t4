@@ -9,8 +9,8 @@ import curses
 stdscr = curses.initscr()
 
 # Throttle should be bounded between [-20, +20]
-MAX_MANUAL_THROTTLE_FORWARD = 25
-MAX_MANUAL_THROTTLE_REVERSE = 65
+MAX_MANUAL_THROTTLE_FORWARD = 22
+MAX_MANUAL_THROTTLE_REVERSE = 60
 
 # Steering should be bounded between [-100, +100]
 
@@ -68,11 +68,11 @@ def main(args=None):
 	# Subscribe to the 'joy' topic
 	# Create publishers for the manual_throttle and manual_steering commands
 	## ------------
-	joySubscriber = node.create_subscription(Joy, "/joy", joy_callback, 10)
+	joySubscriber = node.create_subscription(Joy, "/joy", joy_callback, 1)
 
-	throttlePublisher = node.create_publisher(Int64, "/manual_throttle", 10)
-	steeringPublisher = node.create_publisher(Int64, "/manual_steering", 10)
-	autonomousPublisher = node.create_publisher(Bool, "/autonomous_enabled", 10)
+	throttlePublisher = node.create_publisher(Int64, "/manual_throttle", 1)
+	steeringPublisher = node.create_publisher(Int64, "/manual_steering", 1)
+	autonomousPublisher = node.create_publisher(Bool, "/autonomous_enabled", 1)
 	autonomousPublisher.publish(Bool(data=autonomous_enabled))
 
 	thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
