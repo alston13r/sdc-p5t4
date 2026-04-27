@@ -20,10 +20,11 @@ class DriverNode(Node):
         self.declare_parameter('send_rate_hz', 20.0)
         self.declare_parameter('autonomous_enabled', True)
         self.declare_parameter('max_manual_steer_cmd', 100)
-        self.declare_parameter('max_manual_throttle_forward', 35)
-        self.declare_parameter('max_manual_throttle_reverse', 65)
+        self.declare_parameter('max_manual_throttle_forward', 25)
+        self.declare_parameter('max_manual_throttle_reverse', 50)
         self.declare_parameter('wheel_radius', 0.0325)
         self.declare_parameter('autonomous_speed_scale', 15.0)
+        self.declare_parameter('autonomous_output_scale', 5.0)
 
         can_channel = str(self.get_parameter('can_channel').value)
         can_bitrate = int(self.get_parameter('can_bitrate').value)
@@ -34,11 +35,13 @@ class DriverNode(Node):
         self.max_manual_throttle_reverse = int(self.get_parameter('max_manual_throttle_reverse').value)
         self.wheel_radius = float(self.get_parameter('wheel_radius').value)
         self.autonomous_speed_scale = float(self.get_parameter('autonomous_speed_scale').value)
+        self.autonomous_output_scale = float(self.get_parameter('autonomous_output_scale').value)
 
         self.manual_throttle = 0
         self.manual_steer = 0
         self.autonomous_throttle = 0
         self.autonomous_steer = 0
+        self._debug_count = 0
 
         self.bus = can.interface.Bus(
             bustype='socketcan',
@@ -89,7 +92,7 @@ class DriverNode(Node):
             return
         avg_wheel_rad_s = float(sum(msg.data) / len(msg.data))
         linear_m_s = avg_wheel_rad_s * self.wheel_radius
-        throttle_cmd = int(linear_m_s * self.autonomous_speed_scale)
+        throttle_cmd = int(linear_m_s * self.autonomous_speed_scale * self.autonomous_output_scale)
         self.autonomous_throttle = clip(
             throttle_cmd,
             -self.max_manual_throttle_reverse,
@@ -100,13 +103,30 @@ class DriverNode(Node):
         if self.autonomous_enabled:
             throttle = self.autonomous_throttle
             steer = self.autonomous_steer
+            mode = 'AUTO'
         else:
-            throttle = clip(
-                self.manual_throttle,
-                -self.max_manual_throttle_reverse,
-                self.max_manual_throttle_forward,
+            throttle = self.manual_throttle
+            steer = self.manual_steer
+            mode = 'MANUAL'
+
+        # Final safety clamp before CAN packing/sending.
+        throttle = clip(throttle, -self.max_manual_throttle_reverse, self.max_manual_throttle_forward)
+        steer = clip(steer, -self.max_manual_steer_cmd, self.max_manual_steer_cmd)
+
+        self._debug_count += 1
+        if self._debug_count % 5 == 0:
+            self.get_logger().info(
+                'mode=%s manual(t=%d,s=%d) auto(t=%d,s=%d) can_out(t=%d,s=%d)'
+                % (
+                    mode,
+                    self.manual_throttle,
+                    self.manual_steer,
+                    self.autonomous_throttle,
+                    self.autonomous_steer,
+                    throttle,
+                    steer,
+                )
             )
-            steer = clip(self.manual_steer, -self.max_manual_steer_cmd, self.max_manual_steer_cmd)
 
         try:
             can_data = struct.pack('>hhI', throttle, steer, 0)
