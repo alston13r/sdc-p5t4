@@ -20,12 +20,14 @@ class DriverNode(Node):
         self.declare_parameter('send_rate_hz', 20.0)
         self.declare_parameter('autonomous_enabled', True)
         self.declare_parameter('max_manual_steer_cmd', 100)
-        self.declare_parameter('max_manual_throttle_forward', 25)
-        self.declare_parameter('max_manual_throttle_reverse', 50)
+        self.declare_parameter('max_manual_throttle_forward', 22)
+        self.declare_parameter('max_manual_throttle_reverse', 60)
         self.declare_parameter('wheel_radius', 0.0325)
         self.declare_parameter('autonomous_speed_scale', 15.0)
         self.declare_parameter('autonomous_output_scale', 5.0)
         self.declare_parameter('autonomous_throttle_sign', 1.0)
+        self.declare_parameter('autonomous_steering_scale', 0.32)
+        self.declare_parameter('autonomous_steering_sign', -1.0)
 
         can_channel = str(self.get_parameter('can_channel').value)
         can_bitrate = int(self.get_parameter('can_bitrate').value)
@@ -38,6 +40,8 @@ class DriverNode(Node):
         self.autonomous_speed_scale = float(self.get_parameter('autonomous_speed_scale').value)
         self.autonomous_output_scale = float(self.get_parameter('autonomous_output_scale').value)
         self.autonomous_throttle_sign = float(self.get_parameter('autonomous_throttle_sign').value)
+        self.autonomous_steering_scale = float(self.get_parameter('autonomous_steering_scale').value)
+        self.autonomous_steering_sign = float(self.get_parameter('autonomous_steering_sign').value)
 
         self.manual_throttle = 0
         self.manual_steer = 0
@@ -51,21 +55,21 @@ class DriverNode(Node):
             bitrate=can_bitrate,
         )
 
-        self.create_subscription(Int64, '/manual_throttle', self.manual_throttle_callback, 10)
-        self.create_subscription(Int64, '/manual_steering', self.manual_steering_callback, 10)
+        self.create_subscription(Int64, '/manual_throttle', self.manual_throttle_callback, 1)
+        self.create_subscription(Int64, '/manual_steering', self.manual_steering_callback, 1)
         self.create_subscription(
             Float64MultiArray,
             '/steering_position_controller/commands',
             self.autonomous_steering_callback,
-            10,
+            1,
         )
         self.create_subscription(
             Float64MultiArray,
             '/traction_velocity_controller/commands',
             self.autonomous_traction_callback,
-            10,
+            1,
         )
-        self.create_subscription(Bool, '/autonomous_enabled', self.autonomous_enabled_callback, 10)
+        self.create_subscription(Bool, '/autonomous_enabled', self.autonomous_enabled_callback, 1)
 
         period = 1.0 / max(send_rate_hz, 1.0)
         self.create_timer(period, self.send_can_command)
@@ -86,7 +90,12 @@ class DriverNode(Node):
         if not msg.data:
             return
         avg_steer_rad = float(sum(msg.data) / len(msg.data))
-        steer_cmd = int((avg_steer_rad / 0.52) * self.max_manual_steer_cmd)
+        steer_cmd = int(
+            (avg_steer_rad / 0.52)
+            * self.max_manual_steer_cmd
+            * self.autonomous_steering_scale
+            * self.autonomous_steering_sign
+        )
         self.autonomous_steer = clip(steer_cmd, -self.max_manual_steer_cmd, self.max_manual_steer_cmd)
 
     def autonomous_traction_callback(self, msg: Float64MultiArray) -> None:
