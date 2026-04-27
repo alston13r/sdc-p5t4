@@ -2,23 +2,29 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-from std_msgs.msg import Int64
+from std_msgs.msg import Bool, Int64
 import threading
 import curses
 
 stdscr = curses.initscr()
 
 # Throttle should be bounded between [-20, +20]
-MAX_MANUAL_THROTTLE_FORWARD = 23
-MAX_MANUAL_THROTTLE_REVERSE = 57
+MAX_MANUAL_THROTTLE_FORWARD = 35
+MAX_MANUAL_THROTTLE_REVERSE = 65
 
 # Steering should be bounded between [-100, +100]
 
 steering = 0
 throttle = 0
+autonomous_enabled = True
+toggle_button_prev = 0
+autonomousPublisher = None
+
+# Default to A button on Xbox layouts.
+AUTONOMY_TOGGLE_BUTTON_INDEX = 0
 
 def joy_callback(data):
-	global steering, throttle
+	global steering, throttle, autonomous_enabled, toggle_button_prev, autonomousPublisher
 
 	'''print("\r\n")
 	print(data.axes[1])	# Throttle
@@ -38,9 +44,21 @@ def joy_callback(data):
 	#	throttle = data.axes[1] * MAX_MANUAL_THROTTLE_REVERSE
 	#else:
 	#	throttle = data.axes[1] * MAX_MANUAL_THROTTLE_FORWARD
-	
+
+	button_pressed = 0
+	if len(data.buttons) > AUTONOMY_TOGGLE_BUTTON_INDEX:
+		button_pressed = int(data.buttons[AUTONOMY_TOGGLE_BUTTON_INDEX])
+
+	# Toggle only on rising edge of the configured button.
+	if button_pressed == 1 and toggle_button_prev == 0:
+		autonomous_enabled = not autonomous_enabled
+		if autonomousPublisher is not None:
+			autonomousPublisher.publish(Bool(data=autonomous_enabled))
+
+	toggle_button_prev = button_pressed
 
 def main(args=None):
+	global autonomousPublisher
 
 	rclpy.init(args=args)
 	node = Node("xbox_controller_node")
@@ -54,6 +72,8 @@ def main(args=None):
 
 	throttlePublisher = node.create_publisher(Int64, "/manual_throttle", 10)
 	steeringPublisher = node.create_publisher(Int64, "/manual_steering", 10)
+	autonomousPublisher = node.create_publisher(Bool, "/autonomous_enabled", 10)
+	autonomousPublisher.publish(Bool(data=autonomous_enabled))
 
 	thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
 	thread.start()
@@ -74,6 +94,7 @@ def main(args=None):
 			stdscr.addstr(1, 25, 'Xbox Controller       ')
 			stdscr.addstr(2, 25, 'Throttle: %.2f  ' % throttle)
 			stdscr.addstr(3, 25, 'Steering: %.2f  ' % steering)
+			stdscr.addstr(4, 25, f'Autonomous: {autonomous_enabled}   ')
 
 			rate.sleep()
 		except KeyboardInterrupt:
