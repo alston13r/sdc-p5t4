@@ -9,10 +9,11 @@ import curses
 stdscr = curses.initscr()
 
 # Throttle should be bounded between [-20, +20]
-MAX_MANUAL_THROTTLE_FORWARD = 22
+MAX_MANUAL_THROTTLE_FORWARD = 23
 MAX_MANUAL_THROTTLE_REVERSE = 60
 
 # Steering should be bounded between [-100, +100]
+MAX_MANUAL_STEERING = 100
 
 steering = 0
 throttle = 0
@@ -34,7 +35,7 @@ def joy_callback(data):
 	## ------------
 	## YOUR CODE
 	## ------------
-	steering = data.axes[2] * -100
+	steering = data.axes[2] * -MAX_MANUAL_STEERING
 	throttle = data.axes[1] * 100
 	if throttle > MAX_MANUAL_THROTTLE_FORWARD:
 		throttle = MAX_MANUAL_THROTTLE_FORWARD
