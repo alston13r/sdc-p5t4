@@ -16,8 +16,12 @@ from launch import LaunchService
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
-    
-    urdf_path = '/home/wolfwagen/ros2_ws/src/full_slam/car.urdf.xacro'
+
+    pkg_share = get_package_share_directory('p5t4')
+    urdf_path = os.path.join(pkg_share, 'urdf', 'car.urdf.xacro')
+    zed_config_dir = os.path.join(pkg_share, 'config')
+    slam_params_path = os.path.join(pkg_share, 'config', 'slam_params.yaml')
+
     robot_description = ParameterValue(Command(['xacro ', urdf_path]), value_type=str)
 
     rviz2 = Node(
@@ -79,7 +83,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'camera_model': 'zed2i',
-            'config_path': '/home/wolfwagen/ros2_ws/src/full_slam',
+            'config_path': zed_config_dir,
             'config_file': 'zed_config.yaml',
         }.items(),
     )
@@ -89,7 +93,7 @@ def generate_launch_description():
             PathJoinSubstitution([FindPackageShare('slam_toolbox'), 'launch', 'online_async_launch.py'])
         ),
         launch_arguments={
-            'slam_params_file': '/home/wolfwagen/ros2_ws/src/full_slam/slam_params.yaml',
+            'slam_params_file': slam_params_path,
         }.items(),
     )
 
