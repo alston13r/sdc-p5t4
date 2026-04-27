@@ -65,7 +65,7 @@ controller_server:
       stateful: true
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 2.0
+      desired_linear_vel: 1.5
       # Reduce preview distance so steering decisions are based on nearer path points.
       lookahead_dist: 0.35
       min_lookahead_dist: 0.18
