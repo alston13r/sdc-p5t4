@@ -1,0 +1,225 @@
+<?xml version="1.0"?>
+<robot name="ackermann_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="wheelbase" value="0.215"/>
+  <xacro:property name="track" value="0.16"/>
+  <xacro:property name="wheel_radius" value="0.0325"/>
+  <xacro:property name="wheel_width" value="0.03"/>
+  <xacro:property name="chassis_length" value="0.32"/>
+  <xacro:property name="chassis_width" value="0.20"/>
+  <xacro:property name="chassis_height" value="0.08"/>
+  <xacro:property name="chassis_center_x" value="${wheelbase / 2.0}"/>
+  <xacro:property name="camera_x" value="${wheelbase}"/>
+  <xacro:property name="camera_z" value="0.08"/>
+  <xacro:property name="lidar_radius" value="0.04"/>
+  <xacro:property name="lidar_height" value="0.04"/>
+  <xacro:property name="lidar_x" value="0.0"/>
+  <xacro:property name="lidar_z" value="0.175"/>
+
+  <material name="gray">
+    <color rgba="0.5 0.5 0.5 0.45"/>
+  </material>
+  <material name="black">
+    <color rgba="0.1 0.1 0.1 1.0"/>
+  </material>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="${chassis_center_x} 0 ${chassis_height / 2.0}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="gray"/>
+    </visual>
+    <collision>
+      <origin xyz="${chassis_center_x} 0 ${chassis_height / 2.0}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="${chassis_center_x} 0 ${chassis_height / 2.0}" rpy="0 0 0"/>
+      <mass value="5.0"/>
+      <inertia ixx="0.07" ixy="0.0" ixz="0.0" iyy="0.10" iyz="0.0" izz="0.12"/>
+    </inertial>
+  </link>
+
+  <link name="front_left_steer_link"/>
+  <link name="front_right_steer_link"/>
+
+  <link name="front_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <link name="front_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <link name="rear_left_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <link name="rear_right_wheel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <geometry>
+        <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <joint name="front_left_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_left_steer_link"/>
+    <origin xyz="${wheelbase} ${track / 2.0} ${wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.6" upper="0.6" effort="30.0" velocity="2.0"/>
+  </joint>
+
+  <joint name="front_right_steer_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_right_steer_link"/>
+    <origin xyz="${wheelbase} ${-track / 2.0} ${wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.6" upper="0.6" effort="30.0" velocity="2.0"/>
+  </joint>
+
+  <joint name="front_left_wheel_joint" type="continuous">
+    <parent link="front_left_steer_link"/>
+    <child link="front_left_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <joint name="front_right_wheel_joint" type="continuous">
+    <parent link="front_right_steer_link"/>
+    <child link="front_right_wheel_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_left_wheel_link"/>
+    <origin xyz="0 ${track / 2.0} ${wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_right_wheel_link"/>
+    <origin xyz="0 ${-track / 2.0} ${wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="camera_mount_link">
+    <visual>
+      <origin xyz="-0.0225 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.045 0.18 0.03"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_mount_link"/>
+    <origin xyz="${camera_x} 0 ${camera_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Car-level camera frame (physical mount center). -->
+  <link name="camera_link"/>
+  <joint name="camera_mount_to_camera_joint" type="fixed">
+    <parent link="camera_mount_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Optical frame follows REP-103: X right, Y down, Z forward. -->
+  <link name="camera_optical_frame"/>
+  <joint name="camera_to_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+  </joint>
+
+  <link name="lidar_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="${lidar_x} 0 ${lidar_z}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="lidar_scan_frame"/>
+  <joint name="lidar_scan_joint" type="fixed">
+    <parent link="lidar_link"/>
+    <child link="lidar_scan_frame"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <ros2_control name="ackermann_mock_system" type="system">
+    <hardware>
+      <plugin>mock_components/GenericSystem</plugin>
+    </hardware>
+
+    <joint name="front_left_steer_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="front_right_steer_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="rear_left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="rear_right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+</robot>

@@ -1,0 +1,16 @@
+pos_tracking:
+  publish_tf: true
+  publish_map_tf: false        # IMPORTANT: SLAM Toolbox owns map → odom
+  # Match SLAM base_frame so ZED owns odom -> base_footprint.
+  base_frame: base_footprint
+  odometry_frame: odom
+
+point_cloud:
+  publish_point_cloud: false   # optional (turn on only if needed)
+
+mapping:
+  mapping_enabled: false       # SLAM Toolbox handles mapping
+
+diagnostics:
+  enabled: true
+
