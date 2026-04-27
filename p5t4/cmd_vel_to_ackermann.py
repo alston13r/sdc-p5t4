@@ -26,9 +26,9 @@ class CmdVelToAckermann(Node):
         steering_topic = str(self.get_parameter('steering_topic').value)
         traction_topic = str(self.get_parameter('traction_topic').value)
 
-        self.steering_pub = self.create_publisher(Float64MultiArray, steering_topic, 10)
-        self.traction_pub = self.create_publisher(Float64MultiArray, traction_topic, 10)
-        self.create_subscription(Twist, cmd_vel_topic, self.cmd_vel_callback, 10)
+        self.steering_pub = self.create_publisher(Float64MultiArray, steering_topic, 1)
+        self.traction_pub = self.create_publisher(Float64MultiArray, traction_topic, 1)
+        self.create_subscription(Twist, cmd_vel_topic, self.cmd_vel_callback, 1)
 
         self.get_logger().info('cmd_vel_to_ackermann ready')
 

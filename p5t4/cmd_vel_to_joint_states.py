@@ -35,8 +35,8 @@ class CmdVelToJointStates(Node):
         self.rear_right_wheel_pos = 0.0
         self.last_t = self.get_clock().now()
 
-        self.publisher = self.create_publisher(JointState, joint_states_topic, 10)
-        self.create_subscription(Twist, cmd_vel_topic, self.cmd_vel_callback, 10)
+        self.publisher = self.create_publisher(JointState, joint_states_topic, 1)
+        self.create_subscription(Twist, cmd_vel_topic, self.cmd_vel_callback, 1)
         self.create_timer(1.0 / max(self.publish_rate_hz, 1.0), self.publish_joint_states)
 
     def cmd_vel_callback(self, msg: Twist) -> None:
