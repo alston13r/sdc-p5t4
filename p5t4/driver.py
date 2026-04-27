@@ -1,69 +1,130 @@
+import struct
 #!/usr/bin/env python
+
+import can
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int64
-import struct
-import can
-import threading
-import time
-
-throttle = 0
-steer = 0
-
-## ------------
-## YOUR CODE
-## ------------
-def throttle_callback(msg):
-    global throttle
-
-    throttle = msg.data
-
-def steering_callback(msg):
-    global steer 
-
-    steer = msg.data
+from std_msgs.msg import Bool, Float64MultiArray, Int64
 
 
-def main(args=None):
-    bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate= 250000)
-    
-    rclpy.init(args=args)
-    node = Node("driver")
+def clip(value: int, lower: int, upper: int) -> int:
+    return max(lower, min(upper, value))
 
-    ## ------------
-    ## YOUR CODE
-    # Subscribe to the manual_throttle and manual_steering commands
-    ## ------------
-    throttleSubscriber = node.create_subscription(Int64, "/manual_throttle", throttle_callback, 10)
-    steeringSubscriber = node.create_subscription(Int64, "/manual_steering", steering_callback, 10)
 
-    thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
-    thread.start()
- 
-    rate = node.create_rate(20, node.get_clock())
-    while rclpy.ok():
+class DriverNode(Node):
+    def __init__(self) -> None:
+        super().__init__('driver')
 
-        print('throttle: %d, steering: %d' % (throttle, steer))
+        self.declare_parameter('can_channel', 'can0')
+        self.declare_parameter('can_bitrate', 250000)
+        self.declare_parameter('send_rate_hz', 20.0)
+        self.declare_parameter('autonomous_enabled', True)
+        self.declare_parameter('max_manual_steer_cmd', 100)
+        self.declare_parameter('max_manual_throttle_forward', 23)
+        self.declare_parameter('max_manual_throttle_reverse', 57)
+        self.declare_parameter('wheel_radius', 0.0325)
+        self.declare_parameter('autonomous_speed_scale', 15.0)
+
+        can_channel = str(self.get_parameter('can_channel').value)
+        can_bitrate = int(self.get_parameter('can_bitrate').value)
+        send_rate_hz = float(self.get_parameter('send_rate_hz').value)
+        self.autonomous_enabled = bool(self.get_parameter('autonomous_enabled').value)
+        self.max_manual_steer_cmd = int(self.get_parameter('max_manual_steer_cmd').value)
+        self.max_manual_throttle_forward = int(self.get_parameter('max_manual_throttle_forward').value)
+        self.max_manual_throttle_reverse = int(self.get_parameter('max_manual_throttle_reverse').value)
+        self.wheel_radius = float(self.get_parameter('wheel_radius').value)
+        self.autonomous_speed_scale = float(self.get_parameter('autonomous_speed_scale').value)
+
+        self.manual_throttle = 0
+        self.manual_steer = 0
+        self.autonomous_throttle = 0
+        self.autonomous_steer = 0
+
+        self.bus = can.interface.Bus(
+            bustype='socketcan',
+            channel=can_channel,
+            bitrate=can_bitrate,
+        )
+
+        self.create_subscription(Int64, '/manual_throttle', self.manual_throttle_callback, 10)
+        self.create_subscription(Int64, '/manual_steering', self.manual_steering_callback, 10)
+        self.create_subscription(
+            Float64MultiArray,
+            '/steering_position_controller/commands',
+            self.autonomous_steering_callback,
+            10,
+        )
+        self.create_subscription(
+            Float64MultiArray,
+            '/traction_velocity_controller/commands',
+            self.autonomous_traction_callback,
+            10,
+        )
+        self.create_subscription(Bool, '/autonomous_enabled', self.autonomous_enabled_callback, 10)
+
+        period = 1.0 / max(send_rate_hz, 1.0)
+        self.create_timer(period, self.send_can_command)
+
+        mode = 'autonomous' if self.autonomous_enabled else 'manual'
+        self.get_logger().info(f'driver ready on {can_channel} ({can_bitrate} bps), mode={mode}')
+
+    def manual_throttle_callback(self, msg: Int64) -> None:
+        self.manual_throttle = int(msg.data)
+
+    def manual_steering_callback(self, msg: Int64) -> None:
+        self.manual_steer = int(msg.data)
+
+    def autonomous_enabled_callback(self, msg: Bool) -> None:
+        self.autonomous_enabled = bool(msg.data)
+
+    def autonomous_steering_callback(self, msg: Float64MultiArray) -> None:
+        if not msg.data:
+            return
+        avg_steer_rad = float(sum(msg.data) / len(msg.data))
+        steer_cmd = int((avg_steer_rad / 0.52) * self.max_manual_steer_cmd)
+        self.autonomous_steer = clip(steer_cmd, -self.max_manual_steer_cmd, self.max_manual_steer_cmd)
+
+    def autonomous_traction_callback(self, msg: Float64MultiArray) -> None:
+        if not msg.data:
+            return
+        avg_wheel_rad_s = float(sum(msg.data) / len(msg.data))
+        linear_m_s = avg_wheel_rad_s * self.wheel_radius
+        throttle_cmd = int(linear_m_s * self.autonomous_speed_scale)
+        self.autonomous_throttle = clip(
+            throttle_cmd,
+            -self.max_manual_throttle_reverse,
+            self.max_manual_throttle_forward,
+        )
+
+    def send_can_command(self) -> None:
+        if self.autonomous_enabled:
+            throttle = self.autonomous_throttle
+            steer = self.autonomous_steer
+        else:
+            throttle = clip(
+                self.manual_throttle,
+                -self.max_manual_throttle_reverse,
+                self.max_manual_throttle_forward,
+            )
+            steer = clip(self.manual_steer, -self.max_manual_steer_cmd, self.max_manual_steer_cmd)
+
         try:
-            # DO NOT COMPUTE THE PWM VALUES IN ORIN. Just send the raw command values. 
             can_data = struct.pack('>hhI', throttle, steer, 0)
-
-            ## ------------
-            ## YOUR CODE
-            # Create a CAN message with can_data and  arbitration_id 0x1, and send it.
-            # Hint: See Lecture 4 slides
-            ## ------------
             message = can.Message(arbitration_id=0x1, data=can_data, is_extended_id=False)
-            ret = bus.send(message)
-
+            self.bus.send(message)
         except Exception as error:
-            print("An exception occurred:", error)
-        finally:
-            rate.sleep()
+            self.get_logger().error(f'CAN send failed: {error}')
 
-    rclpy.spin(node)
-    rclpy.shutdown()
 
-	
+def main(args=None) -> None:
+    rclpy.init(args=args)
+    node = DriverNode()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
 if __name__ == '__main__':
-	main()
+    main()
