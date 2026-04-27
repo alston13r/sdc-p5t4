@@ -9,7 +9,7 @@ import curses
 stdscr = curses.initscr()
 
 # Throttle should be bounded between [-20, +20]
-MAX_MANUAL_THROTTLE_FORWARD = 35
+MAX_MANUAL_THROTTLE_FORWARD = 25
 MAX_MANUAL_THROTTLE_REVERSE = 65
 
 # Steering should be bounded between [-100, +100]
