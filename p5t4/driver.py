@@ -20,8 +20,8 @@ class DriverNode(Node):
         self.declare_parameter('send_rate_hz', 20.0)
         self.declare_parameter('autonomous_enabled', True)
         self.declare_parameter('max_manual_steer_cmd', 100)
-        self.declare_parameter('max_manual_throttle_forward', 23)
-        self.declare_parameter('max_manual_throttle_reverse', 57)
+        self.declare_parameter('max_manual_throttle_forward', 35)
+        self.declare_parameter('max_manual_throttle_reverse', 65)
         self.declare_parameter('wheel_radius', 0.0325)
         self.declare_parameter('autonomous_speed_scale', 15.0)
 
