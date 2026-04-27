@@ -9,6 +9,24 @@
   <maintainer email="avrodri3@ncsu.edu">Alston</maintainer>
   <license>MIT</license>
 
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>joy</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>zed_wrapper</exec_depend>
+  <exec_depend>sllidar_ros2</exec_depend>
+  <exec_depend>python3-can</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
