@@ -25,6 +25,7 @@ class DriverNode(Node):
         self.declare_parameter('wheel_radius', 0.0325)
         self.declare_parameter('autonomous_speed_scale', 15.0)
         self.declare_parameter('autonomous_output_scale', 5.0)
+        self.declare_parameter('autonomous_throttle_sign', 1.0)
 
         can_channel = str(self.get_parameter('can_channel').value)
         can_bitrate = int(self.get_parameter('can_bitrate').value)
@@ -36,6 +37,7 @@ class DriverNode(Node):
         self.wheel_radius = float(self.get_parameter('wheel_radius').value)
         self.autonomous_speed_scale = float(self.get_parameter('autonomous_speed_scale').value)
         self.autonomous_output_scale = float(self.get_parameter('autonomous_output_scale').value)
+        self.autonomous_throttle_sign = float(self.get_parameter('autonomous_throttle_sign').value)
 
         self.manual_throttle = 0
         self.manual_steer = 0
@@ -92,7 +94,12 @@ class DriverNode(Node):
             return
         avg_wheel_rad_s = float(sum(msg.data) / len(msg.data))
         linear_m_s = avg_wheel_rad_s * self.wheel_radius
-        throttle_cmd = int(linear_m_s * self.autonomous_speed_scale * self.autonomous_output_scale)
+        throttle_cmd = int(
+            linear_m_s
+            * self.autonomous_speed_scale
+            * self.autonomous_output_scale
+            * self.autonomous_throttle_sign
+        )
         self.autonomous_throttle = clip(
             throttle_cmd,
             -self.max_manual_throttle_reverse,

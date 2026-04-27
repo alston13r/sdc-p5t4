@@ -86,7 +86,7 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='zed_to_base_tf',
-        arguments=['0', '0', '0', '3.14159265359', '0', '0', 'zed_camera_link', 'base_footprint'],
+        arguments=['0', '0', '0', '0', '0', '0', 'zed_camera_link', 'base_footprint'],
         parameters=[{'use_sim_time': use_sim_time}],
         output='screen',
     )
