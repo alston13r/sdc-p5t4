@@ -30,6 +30,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'driver = p5t4.driver:main',
+            'xbox_controller = p5t4.xbox_controller:main',
         ],
     },
 )
