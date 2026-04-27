@@ -32,6 +32,9 @@ setup(
         'console_scripts': [
             'driver = p5t4.driver:main',
             'xbox_controller = p5t4.xbox_controller:main',
+            'cmd_vel_to_ackermann = p5t4.cmd_vel_to_ackermann:main',
+            'cmd_vel_to_joint_states = p5t4.cmd_vel_to_joint_states:main',
+            'ackermann_slider_teleop = p5t4.ackermann_slider_teleop:main',
         ],
     },
 )
